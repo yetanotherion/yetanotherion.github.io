@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Maven to gradle migration</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      table {border-spacing: 20px; }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      .remark-slide-content { background-image: url(imgs/criteo-logo.svg);
+                              background-position: 20px 585px;
+                              background-size: 160px 120px; }
+      img[alt=moab_jmoab] {
+           height: 100%;
+           width: 95%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=moab_jmoab_pre] {
+           height: 100%;
+           width: 95%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=cea_frama_c_makefile] {
+           height: 50%;
+           width: 60%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=love] {
+           height: 30%;
+           width: 30%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=topo_sort] {
+           height: 80%;
+           width: 80%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=change_minus_one] {
+           height: 90%;
+           width: 90%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=change_fix_minus_one_please_publish_please_diff] {
+           height: 80%;
+           width: 80%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=conversion_change_comments] {
+           height: 90%;
+           width: 90%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=diff_zoomed] {
+           height: 60%;
+           width: 60%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=jmoab_full] {
+           height: 80%;
+           width: 80%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=jmoab_moab] {
+           height: 80%;
+           width: 80%;
+           border: none;
+           background: none;
+      }
+
+      img[alt=no_kidding] {
+           height: 10%;
+           width: 10%;
+           border: none;
+           background: none;
+      }
+
+      .red {
+        color: red;
+      }
+
+      .green {
+        color: green;
+      }
+
+      .side {
+        float: right;
+      }
+
+      .caption {
+        font-size: 0.6em;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+# Maven to Gradle: story of a migration
+
+<div style="height:5em">&nbsp;</div>
+
+ .side[Ion Alberdi].left[Emmanuel Guérin]
+
+
+---
+
+# About us
+
+- The Build Services team
+
+  - .side[![Ion](imgs/j.alberdi.jpg)] Ion
+  - .side[![Clément](imgs/c.boone.png)] Clément
+  - .side[![Patrick](imgs/p.bruneton.jpg)] Patrick
+  - .side[![Emmanuel](imgs/e.debanne.jpg)] Emmanuel
+  - .side[![Manu](imgs/e.guerin.jpg)] Manu
+  - .side[![Florian](imgs/f.lherbette.jpg)] Florian
+
+---
+# Agenda
+
+- **March-July 2017**: Coming up with the plan
+
+- **August-December 2017**: Going for the big bang
+
+- **December 2017**: a crisis of faith
+
+- **January-June 2018**: new ideas
+
+- **July 2018 - ?**: full scale migration
+
+- Lessons learned
+---
+# Agenda
+
+- .red[**March-July 2017**: Coming up with the plan]
+
+- **August-December 2017**: Going for the big bang
+
+- **December 2017**: a crisis of faith
+
+- **January-June 2018**: new ideas
+
+- **July 2018 - ?**: full scale migration
+
+- Lessons learned
+---
+class: center
+# What is that?
+
+![jmoab_full](imgs/jmoab_full.png)
+
+---
+
+class: center
+# What is that?
+
+![jmoab_zoom](imgs/zoom.png)
+
+---
+# State of JMOAB with maven
+
+- March 2017
+  - 239 repositories
+  - 652 projects
+  - 2h+ for a new change in the JMOAB to be deployable
+  - 3h for a presubmit on parent-poms
+
+---
+# State of JMOAB with maven
+
+- .side[![repositories](imgs/legacyPipelineRepos.png)]March 2017
+  - 239 repositories
+  - 652 projects
+  - 2h+ for a new change in the JMOAB to be deployable
+  - 3h for a presubmit on parent-poms
+  - pipeline driven by dependency graph
+.center[![design](imgs/legacyPipeline.png)]
+
+---
+# Why changing? It works!
+--
+
+- 239 repositories
+- 652 projects
+- 2h+ for a new change in the JMOAB to be deployable
+- 3h for a presubmit on parent-poms
+- pipeline driven by dependency graph
+
+---
+# Why changing? It works!
+
+- 239 repositories
+- 652 projects
+- .red[2h+ for a new change in the JMOAB to be deployable]
+- .red[3h for a presubmit on parent-poms]
+- pipeline driven by dependency graph
+
+.center[![compiling](imgs/compiling.png)]
+---
+# Why changing? It works!
+
+- 239 repositories
+- 652 projects
+- .red[2h+ for a new change in the JMOAB to be deployable]
+- .red[3h for a presubmit on parent-poms]
+- pipeline driven by dependency graph
+- .red[poms are not maintainable]
+
+???
+To Ion
+---
+# Stacktrace cluedo
+
+```groovy
+SLF4J: See also http://www.slf4j.org/codes.html#log4jDelegationLoop for more details.
+Exception in thread "main" java.lang.ExceptionInInitializerError
+    at java.lang.Class.forName0(Native Method)
+    at java.lang.Class.forName(Class.java:264)
+    at org.slf4j.impl.Log4jLoggerFactory.<clinit>(Log4jLoggerFactory.java:48)
+    at org.slf4j.impl.StaticLoggerBinder.<init>(StaticLoggerBinder.java:72)
+    at org.slf4j.impl.StaticLoggerBinder.<clinit>(StaticLoggerBinder.java:45)
+    at org.slf4j.LoggerFactory.bind(LoggerFactory.java:143)
+    at org.slf4j.LoggerFactory.performInitialization(LoggerFactory.java:122)
+    ...
+    at java.lang.reflect.Method.invoke(Method.java:498)
+    at sun.instrument.InstrumentationImpl.loadClassAndStartAgent(InstrumentationImpl.java:386)
+    at sun.instrument.InstrumentationImpl.loadClassAndCallPremain(InstrumentationImpl.java:401)
+Caused by: java.lang.IllegalStateException: Detected both log4j-over-slf4j.jar AND slf4j-log4j12.jar on the class path...
+    at org.apache.log4j.Log4jLoggerFactory.<clinit>(Log4jLoggerFactory.java:51
+```
+
+--
+
+```groovy
+exclude log4j-over-slf4j
+```
+---
+# State of the art
+
+When is a build system annoying?
+
+--
+  * always?
+
+
+[Build systems à la carte/Microsoft research](https://www.microsoft.com/en-us/research/uploads/prod/2018/03/build-systems-a-la-carte.pdf)
+
+```
+Build systems (such as Make) are big, complicated, and used by every software
+developer on the planet. But they are a sadly unloved part of the software
+ecosystem, very much a means to an end, and seldom the focus of attention.
+```
+--
+
+At least, when it's
+  * not maintainable
+
+--
+
+  * slow
+
+---
+# State of the art
+
+(Let's not complain about parent poms)
+
+.center[![cea_frama_c_makefile](imgs/cea_frama_c_makefile.png)]
+
+.center[ [CEA/FramaC](http://gallium.inria.fr/~scherer/events/jbuilder-design-session-sep-09-2017/slides-bobot-frama-C.pdf)
+]
+
+---
+# State of the art
+
+Let's have the following DAG (Directed Acyclic Graph) of tasks.
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+
+---
+# State of the art
+
+How mvn schedules it. .side[1]
+
+```groovy
+JMOABProject(A, build) *
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+---
+# State of the art
+
+How mvn schedules it. .side[2]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test) *
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+---
+# State of the art
+
+How mvn schedules it. .side[3]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build) *
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+---
+# State of the art
+
+How mvn schedules it. .side[4]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test) *
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+---
+# State of the art
+
+How mvn schedules it. .side[5]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build) *
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+---
+# State of the art
+
+How mvn schedules it. .side[6]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build) *
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+---
+# State of the art
+
+How mvn schedules it. .side[7]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test) *
+    └── JMOABProject(F, build)
+```
+---
+# State of the art
+
+How mvn schedules it. .side[8]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build) *
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+---
+# State of the art
+
+How mvn schedules it. .side[9]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build) *
+```
+---
+# State of the art
+
+How mvn schedules it. .side[10]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build) *
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+
+---
+# State of the art
+
+How it could be scheduled. .side[1]
+
+```groovy
+JMOABProject(A, build) *
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+
+---
+# State of the art
+
+How it could be scheduled. .side[2]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build) *
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test) *
+├── JMOABProject(C, build) *
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build) *
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+
+---
+# State of the art
+
+How it could be scheduled. .side[3]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test) *
+│   └── JMOABProject(E, build) *
+├── JMOABProject(A, test) *
+├── JMOABProject(C, build) *
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build) *
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+
+---
+# State of the art
+
+How it could be scheduled. .side[4]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test) *
+├── JMOABProject(C, build) *
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test) *
+    └── JMOABProject(F, build) *
+```
+
+---
+# State of the art
+
+How it could be scheduled. .side[5]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build) *
+│   └── JMOABProject(G, build)
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test) *
+    └── JMOABProject(F, build) *
+```
+
+---
+# State of the art
+
+How it could be scheduled. .side[6]
+
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build) *
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+
+---
+# State of the art
+
+In the next build, changes are only done in project `G`'s files.
+With the standard
+```shell
+$ mvn clean install
+```
+
+it builds everything in sequence again.
+
+--
+
+But, only `G` should be built.
+```groovy
+JMOABProject(A, build)
+├── JMOABProject(B, build)
+│   ├── JMOABProject(B, test)
+│   └── JMOABProject(E, build)
+├── JMOABProject(A, test)
+├── JMOABProject(C, build)
+│   └── JMOABProject(G, build) *
+└── JMOABProject(D, build)
+    ├── JMOABProject(D, test)
+    └── JMOABProject(F, build)
+```
+
+
+
+---
+# State of the art
+
+
+__Bazel__ (Google)
+
+* good
+  * DAG executed in parallel
+
+--
+  * distributed cache
+
+--
+  * enforces incremental build
+
+--
+* but,
+
+  * scala support not mature
+
+--
+  * no resolution of version conflicts on external dependencies
+
+--
+  * no maven plugin equivalent ([~45 maven plugin jmoab](https://confluence.criteois.com/display/RP/Maven+plugins+and+their+Gradle+equivalent))
+
+--
+
+__Pants, Buck__ (Twitter/Facebook):
+
+```
+Pants, Buck: Both tools were created and developed by ex-Googlers at Twitter and Foursquare,
+and Facebook respectively. They have been modeled after Bazel, but their feature
+sets are different, so they aren't viable alternatives for us.
+```
+
+---
+
+# State of the art
+__Blaze at Google__
+
+* Same as Bazel +
+
+--
+.side[![love](imgs/love.png)]
+
+* distributed execution of the DAG: hundreds of cpus available for your build.
+
+--
+
+  * [Your build in a datacenter](https://archive.fosdem.org/2018/schedule/event/datacenter_build/attachments/slides/2514/export/events/attachments/datacenter_build/slides/2514/bazel_fosdem_2018_final.pdf) (Uber, Twitter, TwoSigma + Google support)
+
+
+
+---
+# State of the art
+
+__Sbt__
+* scala only
+* no disributed build
+* Linkedin migrated sbt to gradle and reports 400% of [improvement](https://engineering.linkedin.com/blog/2018/07/how-we-improved-build-time-by-400-percent).
+* why not [mill](https://github.com/lihaoyi/mill)?
+
+__Gradle__
+
+- DAG of tasks executed in parallel
+- Distributed cache (if tasks support it)
+- Many maven plugins ported to gradle
+- Good community (Linkedin/Netflix/Android, backed by google on it)
+???
+mill may not be mature enough
+
+--
+
+- Distributed builds?
+--
+
+  - [post in gradle forum 2011/Sep](https://discuss.gradle.org/t/parallel-and-distributed-execution)
+  - first features may come in 2019 (in gradle enterprise?).
+
+---
+# The choice
+
+|                 | DAG //         | Incremental Build | Distributed cache | Distributed build | Version conflict resolution | Maven plugins converted |
+|-----------------|:--------------:|:-----------------:|:-----------------:|:-----------------:|:---------------------------:|:-----------------------:|
+| Blaze at Google | *              | *                 | *                 | *                 |                             |                         |
+| Gradle          | *              | Per task          | Per task          |                   | *                           | *                       |
+
+---
+# Stacktrace cluedo
+```groovy
+May 21, 2018 6:24:06 AM io.opencensus.implcore.trace.export.SpanExporterImpl$Worker onBatchExport
+WARNING: Exception thrown by the service export io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter
+java.lang.VerifyError: Bad type on operand stack
+Exception Details:
+Location:
+com/google/api/AnnotationsProto.registerAllExtensions(Lcom/google/protobuf/ExtensionRegistryLite;)V @4: invokevirtual
+Reason:
+Type 'com/google/protobuf/GeneratedMessage$GeneratedExtension' (current frame, stack[1]) is not assignable to 'com/google/protobuf/
+Current Frame:
+bci: @4
+flags: { }
+locals: { 'com/google/protobuf/ExtensionRegistryLite' }
+stack: { 'com/google/protobuf/ExtensionRegistryLite', 'com/google/protobuf/GeneratedMessage$GeneratedExtension' }
+Bytecode:
+0x0000000: 2ab2 0003 b600 04b1
+
+at com.google.devtools.cloudtrace.v2.TraceProto.<clinit>(TraceProto.java:198)
+...
+```
+--
+```groovy
+align protobuf versions
+```
+
+---
+# Coming up with the plan
+.side[![using merely spoons](https://media.giphy.com/media/Is5D12oVRKpMY/giphy.gif)]
+???
+To manu
+
+---
+layout: true
+# Coming up with the plan
+.side[![using merely spoons](imgs/mike.jpg)]
+
+
+---
+
+### How others did
+--
+
+* [Braintree/gradle to bazel](https://www.pgrs.net/2015/09/01/migrating-from-gradle-to-Idea/):
+  * 20 projects
+  * [BazelDeps](https://github.com/johnynek/bazel-deps) tool to migrate (no factorization of build logic though)
+  * ended migration manually
+--
+
+* [Linkedin/sbt to gradle](https://engineering.linkedin.com/blog/2018/07/how-we-improved-build-time-by-400-percent)
+  * 330 Play apps
+  * 2015: migrate everything: fail
+  * 2016: put one app in production learn from there
+  * migrated everything manually (2 years)
+--
+
+* [Redfin/mvn to bazel](https://redfin.engineering/we-switched-from-maven-to-bazel-and-builds-got-10x-faster-b265a7845854)
+  * 300 maven projects (java/javascript only)
+  * mix of auto/manual fixes
+
+---
+### Mixing maven and gradle (April 2017)
+First try: [mvn and gradle in the jmoab](https://confluence.criteois.com/pages/viewpage.action?pageId=326303105)
+--
+
+* Avoids big bang integration, distributes migration and validation.
+
+--
+
+But,
+* no cross-repo in IDE
+
+--
+* requires temporary development in BFS
+
+--
+* no vision on how the script files will look like in the end.
+
+--
+
+__NOGO__
+
+---
+### Big bang (May 2017)
+
+Idea:
+* Use a converter that will be capable of converting all poms in one shot.
+* Use two jmoab: one full maven, one full gradle compare the two until results are the same.
+* Merge big-cross repo when everything is done
+
+[Feasibility study](https://confluence.criteois.com/display/RP/Feasibility+of+maven+to+gradle+automated+translation)
+
+--
+* 637 pom.xml
+
+--
+* 50 reviews merged per week on pom
+
+--
+* must automate translation of plugins:
+   * 47 plugins used in the JMOAB
+   * Among 47, 28 to convert as others are scarcely used.
+
+--
+
+__GO__
+
+---
+layout: false
+# Goals to reach
+
+[JMOAB2 Kick-off (Aug/2017)](https://confluence.criteois.com/display/RP/Kick-off%3A+Towards+an+Efficient+JMOAB): JMOAB in gradle
+
+--
+ * JMOAB builds should be less than 30 minutes.
+
+--
+ * JMOAB presubmits should be less than 30 minutes (worst case scenario).
+
+--
+ * JMOAB jobs should scale with respect to the code base size.
+
+--
+ * Pave the way for later improvements (i.e. choose a build tool which can be easily customized and is actively maintained)
+
+---
+# Stacktrace cluedo
+
+```groovy
+I 1129 09:39:59.406 THREAD1: Serving admin http on 0.0.0.0/0.0.0.0:57001
+java.lang.NoSuchFieldError: WRITE_DURATIONS_AS_TIMESTAMPS
+        at com.fasterxml.jackson.datatype.joda.ser.DurationSerializer.<init>(DurationSerializer.java:28)
+        at com.fasterxml.jackson.datatype.joda.ser.DurationSerializer.<init>(DurationSerializer.java:25)
+        at com.fasterxml.jackson.datatype.joda.JodaModule.<init>(JodaModule.java:45)
+...
+        at com.criteo.hosting.http.CriteoHttpServer.nonExitingMain(CriteoHttpServer.scala:8)
+        at com.twitter.app.App$class.main(App.scala:141)
+        at com.criteo.hosting.http.CriteoHttpServer.main(CriteoHttpServer.scala:8)
+        at com.criteo.langoustine.app.LangoustineLauncher$class.main(LangoustineLauncher.scala:34)
+        at com.criteo.langoustine.app.FastLangoustineLauncher.main(FastLangoustineLauncher.scala:35)
+        at com.criteo.enterprise.alpha.langoustine.AlphaApp.main(AlphaApp.scala)
+Exception thrown in main on startup
+...
+FATAL: LoadService: failed to instantiate 'com.twitter.finagle.stats.HostMetricsExporter' for the requested service ...
+com.fasterxml.jackson.databind.JsonMappingException: Jackson version is too old 2.4.4
+...
+```
+
+--
+
+```groovy
+align jackson versions
+```
+
+---
+# Agenda
+
+- **March-July 2017**: Coming up with the plan
+
+- .red[**August-December 2017**: Going for the big bang]
+
+- **December 2017**: a crisis of faith
+
+- **January-June 2018**: new ideas
+
+- **July 2018 - ?**: full scale migration
+
+- Lessons learned
+
+???
+To Ion
+---
+
+
+# Designing for gradle
+
+### Features:
+   - should be reminiscent of existing maven toolkit
+   - auto discovery of projects
+   - partial checkout (developer use case)
+   - support generation from converter
+   - versioned inside the MOAB
+
+
+--
+
+### More plugins!
+   - BfsPlugin
+   - SeedsPlugin
+   - and the ones to help the converter
+
+???
+- BfsPlugin: tooling for managing workspace (init, checkout, refresh)
+- SeedsPlugin: easily run tasks on client projects
+---
+# Conversion issues
+
+__Build logic factorization__
+
+
+|        | properties | dependencyManagement | pluginManagement | profiles |
+|--------|:----------:|:--------------------:|:----------------:|:--------:|
+| Gradle | ext        | [spring provides a plugin](https://github.com/spring-gradle-plugins/dependency-management-plugin) but performance cost                | Not supported             | Not supported     |
+
+--
+
+__Dynamic workspace__
+
+  * Should build when dependencies are checkout or not
+  * Gradle's [composite builds](https://docs.gradle.org/current/userguide/composite_builds.html)
+     not expressive enough yet for the jmoab [RP-3174](https://jira.criteois.com/browse/RP-3174)
+
+---
+# Conversion issues
+
+__Evaluation of expressions__
+
+|        | effective pom | lazy evaluation |
+|--------|:-------------:|:-----------------------------:|
+| Gradle | Not supported   | Not supported ([GRADLE-1080](https://github.com/gradle/gradle/issues/1080))                     |
+
+???
+effective pom = the POM computed by maven by aggregating all parent poms and executing profiles
+
+--
+
+__Classpath computations__
+
+|        | Set scope of transitive dependencies | provided | exclude | Version conflict solver | BOM import (chd-root/aws) |
+|--------|:------------------------------------:|:-----------------------------:|
+| Gradle | Not supported                        | [spring provides a plugin](https://github.com/spring-gradle-plugins/propdeps-plugin), but different semantics | Different semantics [GRADLE-1473](https://github.com/gradle/gradle/issues/1473) | Different algorithm | Supported in a version that appeared during the migration
+
+---
+# Conversion issues
+
+Being semantically equivalent is very expensive. We chose to limit the scope
+of what is done automatically
+
+__Build logic factorization__
+
+|        | properties | dependencyManagement | pluginManagement | profiles |
+|--------|:----------:|:--------------------:|:----------------:|:--------:|
+| Gradle | ext        | LibraryManagementPlugin / `libraries` ([springsDepMgmt](https://github.com/spring-gradle-plugins/dependency-management-plugin) is more expressive but slower) | Compute all used effective poms, translate in external gradle files (harder than expected due to [GRADLE-1262](https://github.com/gradle/gradle/issues/1262))             | Support CI use case only (no dynamic profile)  |
+--
+
+__Dynamic workspace__
+
+  * MoabWorkspacePlugin / `moabDependencies`
+
+---
+# Conversion issues
+
+__Evaluation of expressions__
+
+|        | effective pom | lazy evaluation |
+|--------|:-------------:|:-----------------------------:|
+| Gradle | __DONE__          | __DONE__ calling  DelayedPlugin / `delayed` when necessary |
+
+
+--
+__Classpath computations__
+
+|        | Set scope of transitive dependencies | provided | exclude | Version conflict solver | BOM import (chd-root/aws) |
+|--------|:------------------------------------:|:-----------------------------:|
+| Gradle | Heuristics                           | Use [spring's plugin](https://github.com/spring-gradle-plugins/propdeps-plugin) | __NOT DONE__ | 2 pass conversion | Heuristic until gradle 4.6
+
+
+---
+
+# Conversion examples: a generated build.gradle
+```xml
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.criteo.pom</groupId>
+    <artifactId>cuttle-parent</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <relativePath>../../../../parent-poms/parent-poms/cuttle-parent/pom.xml</relativePath>
+  </parent>
+  <groupId>com.criteo.xdrichtimeline</groupId>
+  <artifactId>xdrichtimeline-cuttle</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <properties>
+    <!-- Main -->
+    <app.main.class>com.criteo.hadoop.prospecting.cuttle.Application</app.main.class>
+  </properties>
+  <dependencies>
+    <!-- Internal utils shared between cuttles -->
+    <dependency>
+      <groupId>com.criteo.xdrichtimeline</groupId>
+      <artifactId>xdrichtimeline-cuttle-utils</artifactId>
+    </dependency>
+...
+```
+---
+
+# Conversion examples: a generated build.gradle
+
+```groovy
+/* Plugins */
+apply plugin: 'com.criteo.moab-module' // Custom
+apply plugin: 'com.criteo.uberjar' // Custom
+apply plugin: 'distribution' // Native
+apply plugin: 'propdeps' // External
+apply plugin: 'scala' // Native
+
+apply from: parentPomsFile('cuttle-parent/parent.gradle') // include parent pom
+
+/* Properties */
+ext {
+    artifactId = "xdrichtimeline-cuttle"
+    groupId = "com.criteo.xdrichtimeline"
+    app_main_class = "com.criteo.hadoop.prospecting.cuttle.Application"
+}
+```
+
+---
+
+# Conversion examples: a generated build.gradle
+
+```groovy
+/* Plugin Management */
+apply from: parentPomsFile('cuttle-parent/junit.gradle')
+apply from: parentPomsFile('cuttle-parent/scalatest.gradle')
+apply from: repoFile('xdrichtimeline/setup_tar_with_cuttle_jars.gradle') // manual translation
+
+/**
+ * This block aims at enforcing the same version as when Maven resolved it.
+ * The version that would have been selected by gradle is available at the
+ * end of the line as commentary.
+ * Feel free to keep the line or remove it.
+ */
+libraries {
+    library "asm:asm:3.1" // 3.2
+    library "javax.activation:activation:1.1.1" // 1.1
+}
+
+/* Internal dependencies */
+moabDependencies {
+    compile ":identification:xdevicetimeline:xdrichtimeline:xdrichtimeline-cuttle-utils"
+    provided ":identification:xdevicetimeline:xdrichtimeline:cuttle-jars"
+    compile ":cuttle:cuttle-criteo:cuttle-contrib"
+}```
+
+---
+# Conversion examples: a generated build.gradle
+
+```groovy
+/* External dependencies */
+dependencies {
+    compile libraries["org.scala-lang:scala-library"] // dependencyManagement
+    provided libraries["org.apache.hadoop:hadoop-yarn-client"]
+    testCompile libraries["org.scalatest:scalatest_${scala_version_short}"]
+}
+
+/* Assembly plugin */
+distTar {
+    compression = compression.GZIP
+    extension = "tar.gz"
+    classifier = "bundle"
+}
+
+/* Shade plugin */
+shadowJar {
+    dependencies {
+        include(dependency(".*:.*"))
+    }
+    append("reference.conf")
+    transform(de.sebastianboegl.gradle.plugins.shadow.transformers.Log4j2PluginsFileTransformer)
+    manifest {
+        attributes("Main-Class": app_main_class)
+    }
+}
+```
+
+---
+# Agenda
+
+- **March-July 2017**: Coming up with the plan
+
+- **August-December 2017**: Going for the big bang
+
+- .red[**December 2017**: a crisis of faith]
+
+- **January-June 2018**: new ideas
+
+- **July 2018 - ?**: full scale migration
+
+- Lessons learned
+
+???
+To Manu
+---
+
+# 6 months in
+
+- Add features in converter
+- Complete new pipeline (JMOAB2)
+  triggered for each JMOAB
+    - conversion
+--
+    - build
+--
+    - test
+--
+    - comparison of number of tests / produced artifacts (dashboard)
+--
+    - conversations with gradle ([@oehme](https://github.com/oehme), [@melix](https://github.com/melix), [@hansdockter](https://www.linkedin.com/in/hansdockter))
+--
+- December 2017: We start "plateauing" at **80%** on automatic conversion, should we push on?
+
+--
+
+.center[![Hmmm](imgs/chess.jpg)]
+
+???
+Pretty bumed.
+January, keep working while trying to come up with alternatives.
+What's better than fresh (literally) air?
+
+---
+# Stacktrace cluedo
+
+```groovy
+Cause: java.lang.AbstractMethodError: com.criteo.uc.webserver.controllers.AnnotateControllerTest.com$twitter$inject$Logging$_setter_$com$twitter$inject$Logging$$guiceAwareLogger_$eq(Lgrizzled/slf4j/Logger;)V
+  at com.twitter.inject.Logging$class.$init$(Logging.scala:131)
+  ...
+```
+
+--
+
+```groovy
+exclude group:"com.twitter.inject", module:"inject-core_2.11"
+```
+
+---
+# Agenda
+
+- **March-July 2017**: Coming up with the plan
+
+- **August-December 2017**: Going for the big bang
+
+- **December 2017**: a crisis of faith
+
+- .red[**January-June 2018**: new ideas]
+
+- **July 2018 - ?**: full scale migration
+
+- Lessons learned
+---
+# Mixed moab: a Ann Arbor story part I
+
+--
+
+- The big bang thing doesn't look good
+
+- How to bootstrap things using what we have?
+
+--
+
+- Flying Bridge to Ann Arbor / Beers
+.side[![Michigan U.](imgs/michigan.jpg)]
+- An idea while there:
+
+   - a BuildWithMavenPlugin
+   - use the converted gradle projects
+   - replace compilation steps with calls to Maven
+
+???
+- Lonely nights at the hotel
+- Not so lonely nights at the bar
+- -7 -> +1 Celsius
+
+???
+- Lonely nights at the hotel
+- Not so lonely nights at the bar
+- -7 -> +1 Celsius
+
+
+--
+
+- April 2018, JMOAB 1.5 is born!
+
+
+---
+class: center
+# JMOAB 1.5
+![Performance](imgs/jmoab_perf_one.png)
+???
+The performance before the jump doesn't include the packaging step.
+The one after the jump does.
+
+---
+# JMOAB 1.5
+
+- We have a complete gradle pipeline
+- Build times are better
+- We can start migration using the converter:
+--
+
+   - May 2018: [Perpetuo](http://review.criteois.lan/#/c/346423/) is the first gradle repository
+
+
+--
+.side[![parallel pipeline](imgs/newPipeline.png)]
+# JMOAB 1.6
+
+- June 2018:
+   - Switch to parallel pipeline
+   - implementing a distributed gradle cache on maven tasks
+   - June 15th: WOOT WOOT mail: presubmit faster
+
+---
+class: center
+# JMOAB 1.6
+![Performance](imgs/jmoab_perf_two.png)
+
+---
+# Mixed moab: a Ann Arbor story part II: JMOAB 1.7
+
+???
+To Ion
+
+--
+- JMOAB 1.6 works great on CI, but does not work with converted projects using protobuf.
+- Impossible to use for devs
+- Idea: why not parse the poms directly from gradle?
+
+
+???
+It is a problem that devs can't use a mixed workspace because that means that all repos they work on must be converted before they can switch.
+
+
+--
+
+- Second Flying Bridge / More beers
+- Full mixed gradle/maven support without converter
+
+
+--
+
+- Time to start cracking on that conversion...
+
+---
+# Stacktrace cluedo
+
+```groovy
+java.lang.Exception: java.lang.IncompatibleClassChangeError: Implementing class
+    at com.twitter.inject.server.EmbeddedTwitterServer$$anonfun$runNonExitingMain$1.apply$mcV$sp(EmbeddedTwitterServer...
+    at com.twitter.inject.server.EmbeddedTwitterServer$$anonfun$runNonExitingMain$1.apply(EmbeddedTwitterServer.scala:624)
+    at com.twitter.inject.server.EmbeddedTwitterServer$$anonfun$runNonExitingMain$1.apply(EmbeddedTwitterServer.scala:624)
+    at com.twitter.util.Try$.apply(Try.scala:15)
+    at com.twitter.util.ExecutorServiceFuturePool$$anon$4.run(FuturePool.scala:140)
+    at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
+    at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+    at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+    at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+    at java.lang.Thread.run(Thread.java:745)
+```
+
+--
+
+```groovy
+exclude group:"com.typesafe.scala-logging", module: "scala-logging_2.11"
+```
+
+---
+# Agenda
+
+- **March-July 2017**: Coming up with the plan
+
+- **August-December 2017**: Going for the big bang
+
+- **December 2017**: a crisis of faith
+
+- **January-June 2018**: new ideas
+
+- .red[**July 2018 - ?**: full scale migration]
+
+- Lessons learned
+---
+# Industrialize migration
+
+
+* Jobs emulating all cases, bugs found when maven depends on gradle: Schedule the migration from the leaves.
+
+--
+* Topo-sort computed, changes continuously generated /rebased on non migrated leaves only.
+
+--
+* Find owner of each repo...
+
+--
+* Build-services members assign themselves to one repo:
+  * Take contact with devlead
+  * Training
+  * Manual fixes, participate in integration test debugging.
+
+--
+* Maven/Gradle comparison tooling:
+  * please diff
+  * test results/numbers ("what? 0 tests in my maven project? I was SURE I had some")
+  * please publish
+  * findJars
+
+--
+* issues: scala compatibility, IntelliJ integration...
+
+--
+  * .red[__classpath__ __order__]
+
+---
+class: center
+# Industrialize migration
+
+
+![topo_sort](imgs/topo-sort.png)
+
+---
+
+class: center
+# Industrialize migration
+
+
+![conversion_change_comments](imgs/conversion_change_comments.png)
+
+---
+
+class: center
+# Industrialize migration
+
+
+![change_minus_one](imgs/change_minus_one.jpg)
+
+---
+
+
+class: center
+# Industrialize migration
+
+
+![change_fix_minus_one_please_publish_please_diff](imgs/change_fix_minus_one_please_publish_please_diff.jpg)
+
+---
+
+class: center
+# Industrialize migration
+
+
+![diff_zoomed](imgs/diff_zoomed.jpg)
+
+---
+# Nearing the end
+
+???
+To Manu
+
+--
+- What has changed:
+   - Criteo code gained some more weight:
+      - ~~239~~ 304 repositories
+      - ~~652~~ 953 projects
+   - 74% of repositories migrated
+
+
+--
+
+- What about our goals?
+   - Reduce the duration of JMOAB-build to less than 30 minutes.
+
+--
+.green[YES]
+--
+
+   - Reduce the duration of JMOAB-pre-submit to less than 30 minutes (worst case scenario).
+
+--
+.red[NO]
+--
+
+      - 95pt almost <span class="green">YES</span>
+--
+   - Make JMOAB-build and JMOAB-pre-submit scale with respect to the code base size.
+
+--
+.green[YES]
+--
+
+   - Pave the way for later improvements (i.e. choose a build tool which can be easily customized and is actively maintained)
+--
+
+      - if gradle will support distributed builds <span class="green">YES</span>
+--
+      - else: gradle to bazel? <div class="side">(uber: [okbuck](https://github.com/uber/okbuck)) ![no_kidding](imgs/no_kidding.jpg)</div>
+
+---
+.side[![Now what?](imgs/finding-nemo-now-what.jpg)]
+# What is missing
+
+- Gradle scripts are good:
+   - far easier to extend
+   - allows and encourages designs based on convention
+
+
+--
+
+- **Our** Gradle scripts are so-so:
+   - the result of a semi-automated conversion
+   - versioning of external dependencies is still tricky
+   - scala migration should be far easier (in the build scripts)
+   - distributed cache should be for everyone (in read mode)
+
+
+--
+
+- After the migration, improvements to be done to factorize DSL code
+
+---
+# Stacktrace cluedo
+```groovy
+Exception in thread "main" java.lang.NoClassDefFoundError: Could not initialize class org.apache.hadoop.conf.Configuration
+	at org.apache.hadoop.security.UserGroupInformation.ensureInitialized(UserGroupInformation.java:304)
+	at org.apache.hadoop.security.UserGroupInformation.loginUserFromSubject(UserGroupInformation.java:891)
+	at org.apache.hadoop.security.UserGroupInformation.getLoginUser(UserGroupInformation.java:857)
+	at org.apache.hadoop.security.UserGroupInformation.getCurrentUser(UserGroupInformation.java:724)
+	at com.criteo.cuttle.contrib.yarn.ApplicationMaster.<init>(ApplicationMaster.scala:36)
+	at com.criteo.cuttle.contrib.yarn.ApplicationMaster$.main(ApplicationMaster.scala:104)
+	at com.criteo.cuttle.contrib.yarn.ApplicationMaster.main(ApplicationMaster.scala)
+ ```
+
+--
+
+```groovy
+exclude group:"org.apache.logging.log4j"
+```
+---
+# Agenda
+
+- **March-July 2017**: Coming up with the plan
+
+- **August-December 2017**: Going for the big bang
+
+- **December 2017**: a crisis of faith
+
+- **January-June 2018**: new ideas
+
+- **July 2018 - ?**: full scale migration
+
+- .red[Lessons learned]
+---
+# Lessons learned
+
+- If you think a one shot deal is possible, you've not searched long enough for the alternative
+
+--
+- What we learned about our code:
+
+--
+   - uber jars and package generation is a mess:
+      - difficult to know what should be in and what should be out
+      - exclusion logic often duplicated in many projects
+--
+   - class relocation happens quite often
+
+
+--
+
+- Look for better governance in build scripts
+   - know your build
+   - prevent technical debt
+
+???
+- in maven pom files, the logic behind dependency exclusion or relocation is mostly unknown to anyone, making it very hard to change.
+- Build files can have very expensive tech-debt
+   - most of the cost
+     - reverse-engineering what was copy/pasted was not
+     - classpath ordering issues
+---
+class: center, middle
+# Questions?
+
+![jmoab_moab](imgs/jmoab_moab.png)
+---
+
+# Conversion examples: dependencies in parents
+repo/parquet-macros/pom.xml
+
+```xml
+<parent>
+  ...
+  <artifactId>bdp-parent</artifactId> <!-- repo/pom.xml -->
+  ...
+</parent>
+<dependencies>
+    <!-- scala -->
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-reflect</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter</groupId>
+      <artifactId>scalding-core_${scala.version.short}</artifactId>
+    </dependency>
+    ...
+```
+
+---
+
+# Conversion examples: dependencies in parents
+repo/parquet-macros/parent.gradle
+
+```groovy
+apply from: repoFile('parent.gradle') // scala_version_short = "2.11"
+
+dependencies {
+    compile libraries["org.scala-lang:scala-reflect"]
+    compile libraries["org.scala-lang:scala-library"]
+    compile libraries["com.twitter:scalding-core_${scala_version_short}"]
+    ...
+}
+```
+
+--
+
+```groovy
+apply from: repoFile('parquet-macros/parent.gradle')
+ext {
+   scala_version_short = "2.12"
+}
+```
+
+--
+
+scalding-core version?
+
+---
+
+# Conversion examples: dependencies in parents
+repo/parquet-macros/parent.gradle
+
+```groovy
+delayed {
+    dependencies {
+        compile libraries["org.scala-lang:scala-reflect"]
+        compile libraries["org.scala-lang:scala-library"]
+        compile libraries["com.twitter:scalding-core_${scala_version_short}"]
+    }
+}
+```
+
+---
+
+# Conversion examples: pluginManagement in parents
+
+repo/pom.xml
+```xml
+<groupId>com.criteo.hadoop</groupId>
+<artifactId>bdp-parent</artifactId>
+ <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>net.alchim31.maven</groupId>
+          <artifactId>scala-maven-plugin</artifactId>
+          <configuration>
+            <recompileMode>all</recompileMode>
+            <args>
+              <arg>-target:jvm-1.7</arg>
+            </args>
+            <javacArgs>
+              <javacArg>-source</javacArg>
+              <javacArg>1.7</javacArg>
+              <javacArg>-target</javacArg>
+              <javacArg>1.7</javacArg>
+            </javacArgs>
+          </configuration>
+          ...
+```
+---
+
+# Conversion examples: pluginManagement in parents
+
+repo/scala.gradle
+```groovy
+compileScala.scalaCompileOptions.additionalParameters = ["-target:jvm-1.7"]
+compileTestScala.scalaCompileOptions.additionalParameters = ["-target:jvm-1.7"]
+```
+
+---
+
+# Conversion examples: pluginManagement in parents
+repo/parquet-macros/pom.xml
+
+```xml
+<parent>
+  ...
+  <artifactId>bdp-parent</artifactId>
+  ...
+</parent>
+ <artifactId>parquet-macros-parent</artifactId>
+ <build>
+   <pluginManagement>
+     <plugins>
+       <plugin>
+         <groupId>net.alchim31.maven</groupId>
+         <artifactId>scala-maven-plugin</artifactId>
+         <configuration>
+           <compilerPlugins>
+             <compilerPlugin>
+               <groupId>org.scalamacros</groupId>
+               <artifactId>paradise_${scala.version}</artifactId>
+               <version>2.1.0</version>
+             </compilerPlugin>
+           </compilerPlugins>
+         </configuration>
+         ...
+```
+---
+
+# Conversion examples: pluginManagement in parents
+
+repo/parquet-macros/scala.gradle
+```groovy
+/* from pluginManagement of repo/parquet-macros/pom.xml */
+configurations {
+    scalaPlugin {
+        transitive = false
+    }
+}
+
+dependencies {
+    scalaPlugin "org.scalamacros:paradise_${scala_version}:2.1.0"
+}
+String scalaPluginOption = "-Xplugin:${configurations.scalaPlugin.singleFile.path}"
+
+
+def additionalParameters = ["-target:jvm-1.7", // from pluginManagement of repo/pom.xml
+                            scalaPluginOption]
+
+compileScala.scalaCompileOptions.additionalParameters = additionalParameters
+compileTestScala.scalaCompileOptions.additionalParameters = additionalParameters
+```
+
+---
+
+# Conversion examples: pluginManagement in parents
+repo/langoustine-run/build.gradle:
+
+```groovy
+apply from: repoFile('scala.gradle')
+```
+
+repo/parquet-macros/parquet-macros_2.11/build.gradle:
+
+```groovy
+apply from: repoFile('parquet-macros/parent.gradle')
+apply from: repoFile('parquet-macros/scala.gradle')
+
+ext {
+    artifactId = "parquet-macros_2.11"
+    groupId = "com.criteo.hadoop"
+    scala_version = scala211_version
+    scala_version_short = "2.11"
+}
+
+```
+
+--
+
+scalamacros version?
+
+---
+
+# Conversion examples: pluginManagement in parents
+repo/langoustine-run/build.gradle:
+
+```groovy
+apply from: repoFile('scala.gradle')
+```
+
+repo/parquet-macros/parquet-macros_2.11/build.gradle:
+
+```groovy
+apply from: repoFile('parquet-macros/parent.gradle')
+ext {
+    artifactId = "parquet-macros_2.11"
+    groupId = "com.criteo.hadoop"
+    scala_version = scala211_version
+    scala_version_short = "2.11"
+}
+
+apply from: repoFile('parquet-macros/scala.gradle')
+```
+    </textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create({
+        ratio: '16:9',
+        slideNumberFormat: ''
+      });
+    </script>
+  </body>
+</html>
